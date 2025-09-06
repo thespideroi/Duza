@@ -11,6 +11,8 @@ from tkinter.messagebox import showinfo
 from tkinter import filedialog as fd
 from tkinter.scrolledtext import ScrolledText
 import re
+from array import array
+from base64 import b64encode, b64decode
 
 def optionsWindow():
     # Hide the other tab's frames
@@ -74,8 +76,7 @@ def updateDB():
 
 def poolExportYDK():
     export = fd.asksaveasfilename(filetypes=(('YDK Files', '*.ydk'), ('Text Files', '*.txt'), ('All files', '*.*')), defaultextension=('YDK Files', '*.ydk'))
-    #try:
-    if True:
+    try:
         with open(export, 'w') as out:
             # Clear the contents of the file if it already exists
             out.write('')
@@ -93,19 +94,63 @@ def poolExportYDK():
                         tk.messagebox.showinfo(message='Export Completed')
                         break
                 else:
-                    if True:
-                    #try:
+                    try:
                         # re.search to split the line into card quantity and card name
                         # Look up the card name's corresponding passcode and write it
                         #    equal to the listed quantity
                         for j in range(int(re.search("\A(\d+) (.+)\Z", line)[1])):
                             out.write(str(list(df[df['name'].apply(lambda x: x.__eq__(re.search("\A(\d+) (.+)\Z", line)[2]))].index)[0])+'\n')
-                    #except Exception:
-                        #tk.messagebox.showinfo(message='Error reading line: "'+line+'"')
-                        #break
-    #except Exception:
+                    except Exception:
+                        tk.messagebox.showinfo(message='Error reading line: "'+line+'"')
+                        break
+    except Exception:
         # try-except to avoid the program crashing if the user cancels export
-        #print('')
+        print('')
+        
+def poolExportYDKe():
+    main = []
+    side = []
+    extra = []
+    i = 0
+    for line in deckText.get('1.0', tk.END).split('\n'):
+        if len(line) == 0:
+            if i == 0:
+                # Move to the sideboard if the first blank line is encountered
+                i += 1
+            else:
+                # Otherwise finish the export
+                break
+        else:
+            #try:
+            if True:
+                # re.search to split the line into card quantity and card name
+                # Look up the card name's corresponding passcode and write it
+                #    equal to the listed quantity
+                for j in range(int(re.search("\A(\d+) (.+)\Z", line)[1])):
+                    if list(df[df['name'].apply(lambda x: x.__eq__(re.search("\A(\d+) (.+)\Z", line)[2]))].frameType)[0] in ['fusion', 'synchro', 'xyz', 'link', 'fusion_pendulum', 'synchro_pendulum', 'xyz_pendulum']:
+                        extra.append(list(df[df['name'].apply(lambda x: x.__eq__(re.search("\A(\d+) (.+)\Z", line)[2]))].index)[0])
+                    elif i==0:
+                        main.append(list(df[df['name'].apply(lambda x: x.__eq__(re.search("\A(\d+) (.+)\Z", line)[2]))].index)[0])
+                    else:
+                        side.append(list(df[df['name'].apply(lambda x: x.__eq__(re.search("\A(\d+) (.+)\Z", line)[2]))].index)[0])
+            #except Exception:
+                        #tk.messagebox.showinfo(message='Error reading line: "'+line+'"')
+                        # i = 2
+                        #break
+    if i < 2:
+        # Convert the lists of passcodes to YDKe
+        # This code largely taken from Yugioh Domain Toolbox by DarknessCatt
+        # https://github.com/DarknessCatt/Yugioh-Domain-Toolbox/
+        encodedDecks = []
+
+        for deck in [main, extra, side]:
+            idList = array("I", [card for card in deck])
+            b64str = b64encode(idList.tobytes()).decode("ascii")
+            encodedDecks.append(b64str)
+
+        ydkeOut.delete('1.0', tk.END)
+        ydkeOut.insert('1.0', "ydke://" + '!'.join(encodedDecks) + '!')
+        tk.messagebox.showinfo(message='Export Completed')
 
 def importCube():
     # Load a file and insert its contents into the cubeText widget
@@ -175,7 +220,43 @@ def exportCube():
     except Exception:
         # try-except to avoid the program crashing if the user cancels export
         print('')
-    
+   
+def exportCobra():
+    export = fd.asksaveasfilename(filetypes=(('CSV Files', '*.csv'), ('All files', '*.*')), defaultextension=('CSV Files', '*.csv'))
+    try:
+        with open(export, 'w') as out:
+            # Clear the contents of the file if it already exists
+            out.write('')
+        with open(export, 'a', encoding="utf8") as out:
+            out.write('name,CMC,Type,Color,Set,Collector Number,Rarity,Color Category,status,Finish,maybeboard,image URL,image Back URL,tags,Notes,MTGO ID\n')
+            for line in cubeText.get('1.0', tk.END).split('\n'):
+                if not(len(line) == 0):
+                    passcode = int(line)
+                    if passcode in df.index:
+                            # Encode the card as a Wastes with a custom color, mana cost, and image
+                            # Mana cost equal to its Level/Link Rating
+                        out.write('"Wastes",'+str((0 if np.isnan(df.loc[passcode].level) else int(df.loc[passcode].level)) if np.isnan(df.loc[passcode].linkval) else int(df.loc[passcode].linkval))
+                                # Main Deck Monsters and Spells are encoded as Creatures
+                                +',"'+(df.loc[passcode].type.replace('Monster', 'Creature') if df.loc[passcode].frameType in ['effect', 'normal', 'effect_pendulum', 'normal_pendulum'] else df.loc[passcode].type)
+                                # Assign it a color based on certain characteristics
+                                +'",'+('"W"' if df.loc[passcode].frameType in ['effect', 'normal', 'effect_pendulum', 'normal_pendulum'] and df.loc[passcode].level < 4
+                                else '"U"' if df.loc[passcode].frameType in ['effect', 'normal', 'effect_pendulum', 'normal_pendulum'] and df.loc[passcode].level == 4
+                                else '"B"' if df.loc[passcode].frameType in ['effect', 'normal', 'effect_pendulum', 'normal_pendulum'] and df.loc[passcode].level > 4
+                                else '"R"' if df.loc[passcode].frameType == 'spell'
+                                else '"G"' if df.loc[passcode].frameType == 'trap'
+                                # Its YGOPRODeck image link
+                                else '')+',"ogw","184a",common,Lands,Owned,Non-foil,false,"'+df.loc[passcode].card_image+'",,"","'+
+                                # Its name as a Note
+                                str(df.loc[passcode]['name']).replace('"', '')+'",\n')
+                    else:
+                         # Notify the user if a problematic passcode is encountered
+                         tk.messagebox.showinfo(message='Passcode '+line[:-1]+' not found!')
+                         break
+            tk.messagebox.showinfo(message='Export Completed')
+    except Exception:
+        # try-except to avoid the program crashing if the user cancels export
+        print('')   
+
 def passSearch():
     try:
         # Print the name field of the Dataframe row with the passcode's index
@@ -267,9 +348,9 @@ tk.Button(optionsFrame, text="Manual DB Update", command=updateDB).grid(row=0, c
 deckText = ScrolledText(deckFrame)
 deckText.grid(row=0, column=0, columnspan=4, rowspan=4, padx=10, sticky='nsew')
 tk.Button(deckFrame, text="Export YDK", command=poolExportYDK).grid(row=4, column=0, columnspan=2)
-# tk.Button(deckFrame, text="Export ydkE").grid(row=4, column=2, columnspan=2)
-# ydkeOut = tk.Text(deckFrame, height=1)
-# ydkeOut.grid(row=5, column=2, columnspan=2, padx=10, sticky='ew')
+tk.Button(deckFrame, text="Export YDKe", command=poolExportYDKe).grid(row=4, column=2, columnspan=2)
+ydkeOut = tk.Text(deckFrame, height=1, width=18)
+ydkeOut.grid(row=5, column=2, columnspan=2)
 
 # Cube Translator Frame
 tk.Button(cubeFrame, text="Import File", command=importCube).grid(row=0, column=0)
@@ -282,11 +363,16 @@ tk.Button(cubeFrame, text="Import File", command=importCube).grid(row=0, column=
 # tk.Radiobutton(importRadio, text="YDK / TXT", value='ydk', variable=importType).grid(row=1, column=0, sticky='w')
 # importRadio.grid(row=0, column=1, columnspan=3, sticky='w')
 
+tk.Label(cubeFrame, anchor="e", text="Pack Size:").grid(row=0, column=2)
+packSize = tk.Text(cubeFrame, height=1, width=3)
+packSize.insert('1.0', "15")
+packSize.grid(row=0, column=3, sticky="w")
 cubeText = ScrolledText(cubeFrame)
 cubeText.grid(row=1, column=0, columnspan=4, rowspan=4, padx=10, pady=10, sticky='nsew')
 # tk.Button(cubeFrame, text="Export CSV").grid(row=5, column=0)
 # tk.Button(cubeFrame, text="Export YDK").grid(row=5, column=1)
 tk.Button(cubeFrame, text="Export Draftmancer", command=exportCube).grid(row=5, column=2, columnspan=2)
+tk.Button(cubeFrame, text="Export CubeCobra", command=exportCobra).grid(row=5, column=0, columnspan=2)
 
 # Debug Frame
 passField = tk.Text(debugFrame, height=1)
