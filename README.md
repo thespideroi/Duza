@@ -12,7 +12,7 @@ Convert your YuGiOh cubes on YGOPRODeck or cube.yugioh-api into a format usable 
 5. [Options and Debug](#options-and-debug)
 
 ## Installation
-- **For Windows Users**: A compiled executable is available! Unfortunately, It is too large to be distributed via Github — You can attempt to contact us via Discord (@thespideroi) for the time being — but we have plans to start a YuGiOh Cube Discord server in the near future.
+- **For Windows Users**: A compiled executable is available! Unfortunately, It is too large to be distributed via Github — It is available for Download on the [YuGiOh Cube Discord](https://discord.gg/b72Tgva7gh) however.
   - Text fields may not be responsive upon first launch of the executable — If this happens, select a file import button, then cancel the import. This should fix the issue.
 - **For Non-Windows Users**: You will have to compile Duza yourself! Duza requires `numpy`, `pandas`, and `requests`, and was written on Python 3.8.
 
@@ -34,8 +34,7 @@ Convert your YuGiOh cubes on YGOPRODeck or cube.yugioh-api into a format usable 
 1. After drafting your deck on Draftmancer, Select `Export > Card Names`. Draftmancer will copy your deck to the clipboard.
 2. Launch Duza — If you had already launched it, navigate to the `Deck Translator` page.
 3. Paste your deck into the text field. Drafmancer might have tried to add some Basic Land cards at the bottom of your decklist — If it did, delete those lines.
-4. Select `Export YDK`. Name your file and save it to your machine. Upload to your dueling platform of choice!
-   - EDOPro tip — You can drag the YDK file from your file explorer into the Deck Edit window to import the decklist!
+4. Select `Export YDK` or `Export YDKe`. If saving a YDK, name your file and save it to your machine. Upload to your dueling platform of choice!
 
 ## Options and Debug
 ### Options
